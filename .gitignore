@@ -3,3 +3,5 @@ dist/
 scratch/
 *.log
 eval/report*.json
+dist-static/
+.DS_Store

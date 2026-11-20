@@ -1,4 +1,4 @@
-// RoleProof HTTP server: serves the built client and one extraction API.
+// Alignly HTTP server: serves the built client and one extraction API.
 // Privacy: resume bytes live only in memory and a private temp directory removed after each request.
 // Logs record method, path, status and timing only, never document contents or file names.
 import http from 'node:http';
@@ -21,7 +21,7 @@ const TYPES: Record<string, string> = {
 const SECURITY = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
-  'Content-Security-Policy': "default-src 'self'; img-src 'self' data: blob:; object-src 'self' blob:; frame-src 'self' blob:; style-src 'self' 'unsafe-inline'; script-src 'self'",
+  'Content-Security-Policy': "default-src 'self'; img-src 'self' data: blob:; object-src 'self' blob:; frame-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src data: https://fonts.gstatic.com; script-src 'self'",
 };
 
 function serveFile(res: http.ServerResponse, file: string) {
@@ -80,7 +80,7 @@ export function createServer() {
     const t0 = Date.now();
     const url = new URL(req.url ?? '/', 'http://localhost');
     res.on('finish', () => {
-      if (process.env.ROLEPROOF_QUIET) return;
+      if (process.env.ALIGNLY_QUIET) return;
       console.log(`${req.method} ${url.pathname} ${res.statusCode} ${Date.now() - t0}ms`);
     });
     try {
@@ -90,9 +90,9 @@ export function createServer() {
         return res.end(JSON.stringify({ ok: true, ocr: await checkOcr() }));
       }
       if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, SECURITY); return res.end(); }
-      if (url.pathname.startsWith('/samples/')) {
+      if (url.pathname.startsWith('/samples/') || url.pathname.startsWith('/brand/')) {
         const f = path.join(PUBLIC, path.normalize(url.pathname).replace(/^(\.\.[/\\])+/, ''));
-        if (!f.startsWith(path.join(PUBLIC, 'samples'))) { res.writeHead(403, SECURITY); return res.end(); }
+        if (!f.startsWith(path.join(PUBLIC, 'samples')) && !f.startsWith(path.join(PUBLIC, 'brand'))) { res.writeHead(403, SECURITY); return res.end(); }
         return serveFile(res, f);
       }
       const name = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
@@ -111,7 +111,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     process.exit(1);
   }
   createServer().listen(PORT, () => {
-    console.log(`RoleProof running at http://localhost:${PORT}`);
+    console.log(`Alignly running at http://localhost:${PORT}`);
     checkOcr().then((ok) => { if (!ok) console.warn('OCR tools not found: install tesseract-ocr and poppler-utils to read scanned pages.'); });
   });
 }

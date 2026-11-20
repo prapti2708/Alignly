@@ -19,7 +19,7 @@ import type { ResumePage } from '../src/engine/resume.ts';
 import { extractPdf } from '../src/server/extract.ts';
 import { jaccard, resolveSkill } from './score.ts';
 
-process.env.ROLEPROOF_OCR_TIMEOUT_MS ??= '10000';
+process.env.ALIGNLY_OCR_TIMEOUT_MS ??= '10000';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const opt = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -94,7 +94,7 @@ function print(s: NonNullable<Awaited<ReturnType<typeof runSuite>>>) {
   console.log(`Agreement ${pct(s.agreement)} · precision ${pct(s.precision)} · recall ${pct(s.recall)} · false positives ${s.falsePositives} · false negatives ${s.falseNegatives}`);
 }
 
-console.log(`RoleProof evaluation · skill dictionary v${SKILL_DICTIONARY_VERSION}`);
+console.log(`Alignly evaluation · skill dictionary v${SKILL_DICTIONARY_VERSION}`);
 const fixtures = args.includes('--judge-only') ? null : await runSuite(path.join(here, 'cases'), 'DEVELOPER FIXTURES (measured fixture score, not a judge score)');
 if (fixtures) print(fixtures);
 

@@ -29,7 +29,7 @@ DEJAVU_B = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 W, H = A4
 
 # An icon font like Font Awesome: private-use code points mapped to real glyphs.
-ICON_FONT = os.path.join("/tmp", "RoleProofIcons.ttf")
+ICON_FONT = os.path.join("/tmp", "AlignlyIcons.ttf")
 ICONS = {0xF0E0: 0x2709, 0xF095: 0x260E, 0xF09B: 0x2605, 0xF08C: 0x2726}
 f = TTFont(DEJAVU)
 for table in f["cmap"].tables:
@@ -37,8 +37,8 @@ for table in f["cmap"].tables:
         for pua, real in ICONS.items():
             if real in table.cmap:
                 table.cmap[pua] = table.cmap[real]
-f["name"].setName("RoleProofIcons", 1, 3, 1, 0x409)
-f["name"].setName("RoleProofIcons", 4, 3, 1, 0x409)
+f["name"].setName("AlignlyIcons", 1, 3, 1, 0x409)
+f["name"].setName("AlignlyIcons", 4, 3, 1, 0x409)
 f.save(ICON_FONT)
 
 pdfmetrics.registerFont(RLTTFont("DejaVu", DEJAVU))

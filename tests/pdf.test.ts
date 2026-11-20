@@ -7,8 +7,8 @@ import { extractPdf } from '../src/server/extract.ts';
 import { createServer } from '../src/server/index.ts';
 import { analyze } from '../src/engine/analyze.ts';
 
-process.env.ROLEPROOF_OCR_TIMEOUT_MS = '8000';
-process.env.ROLEPROOF_QUIET = '1';
+process.env.ALIGNLY_OCR_TIMEOUT_MS = '8000';
+process.env.ALIGNLY_QUIET = '1';
 const fx = (n: string) => fs.readFileSync(new URL(`../fixtures/pdfs/${n}`, import.meta.url));
 const textOf = async (n: string) => (await extractPdf(fx(n))).pages;
 

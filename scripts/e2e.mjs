@@ -16,8 +16,15 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || undefined, args: ['--no-sandbox'] });
 const failures = [];
 const step = async (name, fn) => {
-  try { await fn(); console.log(`ok   ${name}`); } catch (e) { failures.push(name); console.log(`FAIL ${name}\n     ${e.message.split('\n')[0]}`); }
+  try { await fn(); console.log(`ok   ${name}`); } catch (e) { failures.push(name); console.log(`FAIL ${name}\n     ${e.message.split('\n').slice(0,4).join(' | ')}`); }
 };
+// Enter the app as a guest and open a new analysis.
+async function enter(page) {
+  await page.goto(base + '#sign-in');
+  await page.getByRole('button', { name: 'Continue as guest' }).click();
+  await page.getByRole('button', { name: 'New analysis' }).first().click();
+  await page.getByRole('heading', { level: 1, name: 'Two inputs, one honest comparison' }).waitFor();
+}
 const shot = async (page, name) => { if (shots) { await page.waitForTimeout(400); await page.screenshot({ path: path.join(shots, `${name}.png`), fullPage: true }); } };
 
 for (const [label, viewport] of [['desktop', { width: 1366, height: 900 }], ['mobile', { width: 390, height: 844 }]]) {
@@ -25,9 +32,16 @@ for (const [label, viewport] of [['desktop', { width: 1366, height: 900 }], ['mo
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(base);
+  await step(`${label}: landing page, then live demo runs the whole flow`, async () => {
+    await page.goto(base);
+    await page.getByRole('heading', { level: 1, name: /Know what your resume/ }).waitFor();
+    await shot(page, `${label}-0-landing`);
+    await page.getByRole('button', { name: 'Try the live demo' }).first().click();
+    await page.getByRole('heading', { level: 1, name: /Your resume shows evidence for \d+ of \d+ requirements/ }).waitFor({ timeout: 30000 });
+  });
 
-  await step(`${label}: Try a sample runs the whole flow`, async () => {
+  await step(`${label}: Try a sample from a new analysis`, async () => {
+    await enter(page);
     await shot(page, `${label}-1-input`);
     await page.getByRole('button', { name: 'Try a sample' }).click();
     await page.getByRole('heading', { level: 1, name: /Your resume shows evidence for \d+ of \d+ requirements/ }).waitFor({ timeout: 30000 });
@@ -97,7 +111,7 @@ for (const [label, viewport] of [['desktop', { width: 1366, height: 900 }], ['mo
 // Unreadable page flow (desktop): upload a PDF with an unreadable page.
 await step('unreadable page sends the student to review and never shows false gaps', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  await page.goto(base);
+  await enter(page);
   await page.locator('input[type=file][accept*="pdf"]').setInputFiles(path.join(root, 'fixtures/pdfs/unreadable.pdf'));
   await page.getByLabel('Job description text', { exact: true }).fill('Python is required.\nDocker is required.');
   await page.getByRole('button', { name: /Analyse resume/ }).click();
@@ -113,7 +127,7 @@ await step('unreadable page sends the student to review and never shows false ga
 
 await step('pasted resume text works without a PDF', async () => {
   const page = await browser.newPage();
-  await page.goto(base);
+  await enter(page);
   await page.getByRole('button', { name: /Paste your resume text instead/ }).click();
   await page.locator('#resume-text').fill('Built a placement portal using ReactJS.');
   await page.getByLabel('Job description text', { exact: true }).fill('Experience with React.js or Vue is required.\nDocker is required for packaging services.\nGitHub Actions experience is preferred.\nNo prior AWS experience is needed.');
@@ -123,6 +137,46 @@ await step('pasted resume text works without a PDF', async () => {
   assert.equal(gaps.length, 2);
   assert.ok(gaps[0].includes('Docker') && gaps[1].includes('GitHub Actions'));
   await shot(page, 'acceptance-results');
+  await page.close();
+});
+
+await step('register, save an analysis, sign out and sign back in', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(base + '#register');
+  await page.getByLabel('Full name').fill('Test Student');
+  await page.getByLabel('Email').fill(`student${Date.now()}@example.com`);
+  const email = await page.getByLabel('Email').inputValue();
+  await page.getByLabel('Password', { exact: true }).fill('correct-horse-1');
+  await page.getByLabel('Confirm password').fill('correct-horse-2');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.getByText('Passwords don’t match.').waitFor();
+  await page.getByLabel('Confirm password').fill('correct-horse-1');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.getByRole('heading', { level: 1, name: /, Test\./ }).waitFor();
+  await shot(page, 'dashboard-empty');
+  await page.getByRole('button', { name: 'New analysis' }).first().click();
+  await page.getByRole('button', { name: 'Try a sample' }).click();
+  await page.getByRole('button', { name: 'Save to dashboard' }).click();
+  await page.getByText('Saved to your dashboard').first().waitFor();
+  await page.getByRole('button', { name: 'Overview' }).first().click();
+  await page.getByRole('heading', { name: 'Recent analyses' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Open results' }).count(), 1);
+  await shot(page, 'dashboard');
+  await page.getByRole('button', { name: 'Learning plans' }).first().click();
+  await page.getByRole('button', { name: /Open plan/ }).click();
+  await page.getByRole('heading', { name: 'Your two-week plan' }).waitFor();
+  await page.getByRole('button', { name: 'Sign out' }).first().click();
+  await page.getByRole('heading', { level: 1, name: /Know what your resume/ }).waitFor();
+  await page.goto(base + '#dashboard');
+  await page.getByRole('heading', { level: 1, name: 'Sign in to Alignly' }).waitFor();
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password', { exact: true }).fill('wrong-password');
+  await page.getByRole('button', { name: /^Sign in$/ }).click();
+  await page.getByText(/don’t match an account/).waitFor();
+  await page.getByLabel('Password', { exact: true }).fill('correct-horse-1');
+  await page.getByRole('button', { name: /^Sign in$/ }).click();
+  await page.getByRole('heading', { name: 'Recent analyses' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Open results' }).count(), 1, 'saved analysis survives sign out/in');
   await page.close();
 });
 

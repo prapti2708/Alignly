@@ -32,11 +32,11 @@ export function buildRows(a: Analysis): LensRow[] {
   return rows;
 }
 
-const STATUS: Record<RowStatus, { icon: string; text: string; tone: string; hl: string }> = {
-  missing: { icon: 'gap', text: 'No evidence found in your resume', tone: 'text-ember', hl: 'hl-gap' },
-  matched: { icon: 'matched', text: 'Evidence found in your resume', tone: 'text-teal', hl: 'hl-match' },
-  review: { icon: 'review', text: 'Needs your review', tone: 'text-ochre', hl: 'hl-review' },
-  notneeded: { icon: 'minus', text: 'The JD says this is not needed', tone: 'text-ink-3', hl: 'sentence' },
+const STATUS: Record<RowStatus, { icon: string; text: string; tone: string; hl: string; chip: string; dot: string; group: string }> = {
+  missing: { icon: 'gap', text: 'No evidence found in your resume', tone: 'text-ember', hl: 'hl-gap', chip: 'chip-gap', dot: 'bg-apricot text-ember', group: 'text-ember' },
+  matched: { icon: 'matched', text: 'Evidence found in your resume', tone: 'text-teal', hl: 'hl-match', chip: 'chip-match', dot: 'bg-sage text-teal', group: 'text-teal' },
+  review: { icon: 'review', text: 'Needs your review', tone: 'text-ochre', hl: 'hl-review', chip: 'chip-review', dot: 'bg-rose text-ochre', group: 'text-ochre' },
+  notneeded: { icon: 'minus', text: 'The JD says this is not needed', tone: 'text-ink-3', hl: 'sentence', chip: 'chip-quiet', dot: 'bg-mist text-ink-3', group: 'text-ink-3' },
 };
 
 interface Props {
@@ -67,13 +67,13 @@ export function EvidenceLens({ rows, jd, pages, previews, plan, selected, onSele
   }
 
   if (!rows.length) {
-    return <p className="mt-6 text-ink-2">We didn’t find any skills from our dictionary in this job description, so there is nothing to compare yet. Check that you pasted the full JD.</p>;
+    return <p className="mt-6 card-solid p-6 text-ink-2">We didn’t find any skills from our dictionary in this job description, so there is nothing to compare yet. Check that you pasted the full JD.</p>;
   }
 
   let lastGroup = '';
   return (
-    <div className="mt-6 grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-0 md:gap-10">
-      <div ref={listRef} onKeyDown={onKey} aria-label="Skills found in the job description" role="group">
+    <div className="mt-6 grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] gap-5 md:gap-6 items-start">
+      <div ref={listRef} onKeyDown={onKey} aria-label="Skills found in the job description" role="group" className="card-solid p-2 sm:p-3">
         {rows.map((r) => {
           const header = r.group !== lastGroup ? r.group : null;
           lastGroup = r.group;
@@ -81,26 +81,30 @@ export function EvidenceLens({ rows, jd, pages, previews, plan, selected, onSele
           const s = STATUS[r.status];
           return (
             <div key={r.key}>
-              {header && <h3 className={`eyebrow pt-6 pb-2 border-b rule ${r.status === 'missing' ? 'text-ember!' : r.status === 'matched' ? 'text-teal!' : ''}`}>{header} <span className="font-normal">({rows.filter((x) => x.group === header).length})</span></h3>}
+              {header && (
+                <h3 className={`eyebrow px-3 pt-4 pb-2 flex items-center gap-2 ${s.group}`}>
+                  {header} <span className="ml-auto chip chip-quiet font-semibold normal-case tracking-normal">{rows.filter((x) => x.group === header).length}</span>
+                </h3>
+              )}
               <button
                 data-row={r.key}
                 onClick={() => onSelect(r.key)}
                 aria-expanded={isSel}
                 aria-controls={isSel ? `detail-${r.key} lens-panel` : 'lens-panel'}
-                className={`w-full text-left flex items-center gap-3 py-3 pl-3 pr-2 border-b rule border-l-2 transition-colors ${isSel ? 'bg-paper-2 border-l-ink' : 'border-l-transparent hover:bg-paper-2/60'}`}
+                className={`w-full text-left flex items-center gap-3 py-2.5 pl-2.5 pr-3 rounded-xl transition-all ${isSel ? 'bg-peach shadow-[inset_0_0_0_1px_var(--color-honey)]' : 'hover:bg-shell'}`}
               >
-                <span className={s.tone}><Icon name={s.icon} className="w-[18px] h-[18px]" label={s.text} /></span>
+                <span className={`grid place-items-center w-8 h-8 rounded-lg ${s.dot}`}><Icon name={s.icon} className="w-[17px] h-[17px]" label={s.text} /></span>
                 <span className="flex-1 min-w-0">
-                  <span className="block font-medium truncate">{r.name ?? r.label}</span>
+                  <span className="block font-semibold truncate">{r.name ?? r.label}</span>
                   <span className="block text-xs text-ink-3">
                     {r.tag}{r.item?.gapRank && r.item.gapRank <= 3 && plan?.gaps.length ? ` · Gap ${r.item.gapRank} in plan` : ''}{r.status === 'matched' && r.item?.resume ? ` · page ${r.item.resume.page}` : ''}
                   </span>
                 </span>
-                <span className="font-mono text-xs text-ink-3" aria-label={`JD line ${r.line}`}>L{r.line}</span>
+                <span className="font-mono text-[0.7rem] text-ink-3 bg-white/80 border rule rounded-md px-1.5 py-0.5" aria-label={`JD line ${r.line}`}>L{r.line}</span>
                 <Icon name={isSel ? 'down' : 'chevron'} className="w-4 h-4 text-ink-3 md:hidden" />
               </button>
               {isSel && (
-                <div className="md:hidden border-b rule px-3 py-5 bg-paper-2/50 fade-in" id={`detail-${r.key}`}>
+                <div className="md:hidden mx-1 my-2 rounded-2xl border rule bg-paper px-4 py-5 fade-in" id={`detail-${r.key}`}>
                   <Detail row={r} jd={jd} pages={pages} previews={previews} plan={plan} onJumpToPlan={onJumpToPlan} analysis={analysis} />
                 </div>
               )}
@@ -108,9 +112,12 @@ export function EvidenceLens({ rows, jd, pages, previews, plan, selected, onSele
           );
         })}
       </div>
-      <aside className="hidden md:block" aria-label="Evidence for the selected skill">
-        <div className="sticky top-6 pt-6" id="lens-panel" aria-live="polite">
-          {current && <Detail key={current.key} row={current} jd={jd} pages={pages} previews={previews} plan={plan} onJumpToPlan={onJumpToPlan} analysis={analysis} />}
+      <aside className="hidden md:block sticky top-24" aria-label="Evidence for the selected skill">
+        <div className="card-solid p-7 relative overflow-hidden" id="lens-panel" aria-live="polite">
+          <div className={`absolute -right-16 -top-16 w-48 h-48 rounded-full blur-2xl opacity-70 pointer-events-none ${current?.status === 'matched' ? 'bg-sage' : current?.status === 'missing' ? 'bg-apricot' : 'bg-petal'}`} aria-hidden />
+          <div className="relative">
+            {current && <Detail key={current.key} row={current} jd={jd} pages={pages} previews={previews} plan={plan} onJumpToPlan={onJumpToPlan} analysis={analysis} />}
+          </div>
         </div>
       </aside>
     </div>
@@ -126,8 +133,8 @@ function JDLineView({ jd, q, hl }: { jd: string; q: JDQuote; hl: string }) {
   const h0 = a + q.hlStart, h1 = a + q.hlEnd;
   const multi = line.trim() !== q.quote.trim();
   return (
-    <blockquote className="mt-2 flex gap-4 font-serif text-[1.08rem] leading-relaxed">
-      <span className="font-mono text-xs text-ink-3 pt-1.5 select-none w-6 text-right" aria-hidden>{q.line}</span>
+    <blockquote className="mt-2 flex gap-3 rounded-2xl bg-peach/70 border border-apricot px-4 py-3.5 font-serif text-[1.08rem] leading-relaxed">
+      <span className="font-mono text-[0.7rem] text-ink-3 pt-1.5 select-none w-5 text-right shrink-0" aria-hidden>{q.line}</span>
       <span className="flex-1">
         <span className="text-ink-3">{line.slice(0, a)}</span>
         <span className={multi ? 'sentence' : ''}>
@@ -154,50 +161,59 @@ function Detail({ row, jd, pages, previews, plan, onJumpToPlan, analysis }: { ro
 
   return (
     <div className="fade-in">
-      <p className={`text-sm font-semibold flex items-center gap-2 ${s.tone}`}><Icon name={s.icon} className="w-4 h-4" /> {s.text}</p>
-      <h3 className="font-serif text-[1.9rem] leading-tight mt-2">{row.name ?? it?.canonical}</h3>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`chip ${s.chip}`}><Icon name={s.icon} className="w-3.5 h-3.5" /> {s.text}</span>
+        {it && <span className="chip chip-quiet">{it.strength === 'preferred' ? 'Preferred' : 'Required'}</span>}
+      </div>
+      <h3 className="font-serif text-[2.1rem] leading-tight mt-3">{row.name ?? it?.canonical}</h3>
       {it && it.label.toLowerCase() !== it.canonical.toLowerCase() && <p className="text-sm text-ink-3 mt-1">The JD says “{it.label}”.</p>}
 
       <figure className="mt-6">
-        <figcaption className="eyebrow">Job description · line {row.jd.line}{lineHasMany ? ` · sentence ${sentenceNo}` : ''}</figcaption>
+        <figcaption className="eyebrow flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-honey" aria-hidden /> Job description · line {row.jd.line}{lineHasMany ? ` · sentence ${sentenceNo}` : ''}</figcaption>
         <JDLineView jd={jd} q={row.jd} hl={s.hl} />
-        {it && <p className="mt-2 text-sm text-ink-2 pl-10">{it.strengthReason}{it.otherMentions ? ` Also mentioned ${it.otherMentions} more time${it.otherMentions > 1 ? 's' : ''}.` : ''}</p>}
+        {it && <p className="mt-2 text-sm text-ink-2">{it.strengthReason}{it.otherMentions ? ` Also mentioned ${it.otherMentions} more time${it.otherMentions > 1 ? 's' : ''}.` : ''}</p>}
       </figure>
 
       {row.status === 'matched' && ev && (
-        <figure className="mt-6 border-t rule pt-5">
-          <figcaption className="eyebrow">Your resume · page {ev.page}{ev.usage ? ` · ${ev.usage}` : ''}</figcaption>
-          <div className="mt-2 flex gap-4 items-start">
-            <blockquote className="flex-1 font-serif text-[1.05rem] leading-relaxed whitespace-pre-line">
-              {ev.quote.slice(0, ev.hitStart)}<mark className="hl-match">{ev.quote.slice(ev.hitStart, ev.hitEnd)}</mark>{ev.quote.slice(ev.hitEnd)}
-            </blockquote>
-            {box && page && (
-              <div className="relative w-24 shrink-0 border rule bg-white hidden sm:block" aria-hidden>
-                <img src={previews[page.page - 1]} alt="" className="w-full" />
-                <span className="absolute border-2 border-teal rounded-sm" style={{ left: `${(box.x / page.width) * 100 - 1}%`, top: `${(box.y / page.height) * 100 - 0.6}%`, width: `${(box.w / page.width) * 100 + 2}%`, height: `${Math.max(1.5, (box.h / page.height) * 100 + 1.2)}%` }} />
-              </div>
-            )}
+        <>
+          <div className="flex items-center gap-2 my-3 pl-6 text-ink-3" aria-hidden>
+            <span className="w-px h-6 border-l-2 border-dotted border-ink-3/50" />
+            <span className="text-xs">matched in your resume</span>
           </div>
+          <figure>
+            <figcaption className="eyebrow flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-teal" aria-hidden /> Your resume · page {ev.page}{ev.usage ? ` · ${ev.usage}` : ''}</figcaption>
+            <div className="mt-2 flex gap-4 items-start rounded-2xl bg-sage/50 border border-sage px-4 py-3.5">
+              <blockquote className="flex-1 font-serif text-[1.05rem] leading-relaxed whitespace-pre-line">
+                {ev.quote.slice(0, ev.hitStart)}<mark className="hl-match">{ev.quote.slice(ev.hitStart, ev.hitEnd)}</mark>{ev.quote.slice(ev.hitEnd)}
+              </blockquote>
+              {box && page && (
+                <div className="relative w-20 shrink-0 rounded-md overflow-hidden bg-white shadow-sm hidden sm:block" aria-hidden>
+                  <img src={previews[page.page - 1]} alt="" className="w-full" />
+                  <span className="absolute border-2 border-teal rounded-sm bg-sage/30" style={{ left: `${(box.x / page.width) * 100 - 1}%`, top: `${(box.y / page.height) * 100 - 0.6}%`, width: `${(box.w / page.width) * 100 + 2}%`, height: `${Math.max(1.5, (box.h / page.height) * 100 + 1.2)}%` }} />
+                </div>
+              )}
+            </div>
+          </figure>
           {it?.explanation && (
-            <p className="mt-3 text-sm bg-teal-soft/60 border-l-2 border-teal px-3 py-2 flex gap-2"><Icon name="check" className="w-4 h-4 text-teal mt-0.5" /> <span>{it.explanation}</span></p>
+            <p className="mt-3 text-sm rounded-xl bg-white/80 border rule px-3.5 py-2.5 flex gap-2"><Icon name="check" className="w-4 h-4 text-teal mt-0.5" /> <span>{it.explanation}</span></p>
           )}
-        </figure>
+        </>
       )}
 
       {row.status === 'missing' && it && (
-        <div className="mt-6 border-t rule pt-5 text-sm text-ink-2 space-y-3">
-          <p>
+        <div className="mt-6 space-y-4 text-sm text-ink-2">
+          <p className="rounded-2xl bg-shell px-4 py-3.5">
             We searched every page of your resume, including projects, internships and table cells, and found no mention of {it.canonical}. That says nothing about your ability. If you have used it, name it where you used it, then rerun the analysis.
           </p>
           {it.gapRank && (
-            <div>
+            <div className="rounded-2xl border border-honey/70 bg-apricot/30 px-4 py-3.5">
               <p className="eyebrow text-ember!">Gap {it.gapRank} of {totalGaps}{it.gapRank > 3 ? ' · not in this plan' : ''}</p>
               <p className="mt-1">{it.gapReason}</p>
               {it.gapRank > 3 && <p className="mt-1 text-ink-3">The plan covers the top three gaps so that each gets real practice time.</p>}
             </div>
           )}
           {gap && days.length > 0 && (
-            <button className="btn btn-line py-1.5! text-sm!" onClick={() => onJumpToPlan(row.key)}>
+            <button className="btn btn-soft py-2! text-sm!" onClick={() => onJumpToPlan(row.key)}>
               In your plan: Days {days[0]}–{days[days.length - 1]} <Icon name="arrow" />
             </button>
           )}
@@ -205,13 +221,13 @@ function Detail({ row, jd, pages, previews, plan, onJumpToPlan, analysis }: { ro
       )}
 
       {row.status === 'review' && it && (
-        <div className="mt-6 border-t rule pt-5 text-sm text-ink-2">
+        <div className="mt-6 rounded-2xl bg-petal px-4 py-3.5 text-sm text-ink-2">
           <p>{it.reviewReason}</p>
           <p className="mt-2 text-ink-3">Items needing review are not counted as matched or missing, and are not added to the plan.</p>
         </div>
       )}
       {row.status === 'notneeded' && (
-        <p className="mt-6 border-t rule pt-5 text-sm text-ink-2">The JD says {row.name} isn’t needed, so it is not counted and won’t appear as a gap.</p>
+        <p className="mt-6 rounded-2xl bg-mist/70 px-4 py-3.5 text-sm text-ink-2">The JD says {row.name} isn’t needed, so it is not counted and won’t appear as a gap.</p>
       )}
     </div>
   );
